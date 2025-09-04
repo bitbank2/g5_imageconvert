@@ -26,3 +26,9 @@ It uses my PNGdec library for decoding PNG images and includes this as a submodu
 ready to use it.
 
 # How well does it compress images?
+FAX (Group4) compression was designed to compress black text on a white page. G5 is the same. It compresses images in two ways - one dimensionally
+with run length encoding (RLE) and two dimensionally by compressing the points that change color on the current line relative to similar points
+on the line above. This works quite well for images with large areas of constant color with straight or curved edges (like fonts). This doesn't 
+perform well on dithered patterns because it uses more bits to encode alternating colors that would be used by uncompressed data. For your average
+non-dithered 1-bit image, you'll usually get between 4 and 10 to 1 compression. The codec both compresses and decompresses images very quickly
+so the extra CPU cycles needed to decompress font images is insignificant compared to the overall font drawing.
