@@ -1,0 +1,3 @@
+[submodule "PNGdec"]
+	path = PNGdec
+	url = https://github.com/bitbank2/PNGdec
