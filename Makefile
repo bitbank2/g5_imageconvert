@@ -1,14 +1,14 @@
 PNG_ROOT = PNGdec/src
 
-all: pngconvert
-CFLAGS = -D__LINUX__ -I $(PNG_ROOT) -Wall -O2
+all: imgcvt
+CFLAGS = -D__LINUX__ -DPNG_MAX_BUFFERED_PIXELS=2501*8 -I $(PNG_ROOT) -Wall -O2
 
-pngconvert: png_main.o PNGdec.o adler32.o crc32.o infback.o inffast.o inflate.o inftrees.o zutil.o
-	$(CC) png_main.o PNGdec.o adler32.o crc32.o infback.o inffast.o inflate.o inftrees.o zutil.o -o pngconvert
+imgcvt: main.o PNGdec.o adler32.o crc32.o infback.o inffast.o inflate.o inftrees.o zutil.o
+	$(CC) main.o PNGdec.o adler32.o crc32.o infback.o inffast.o inflate.o inftrees.o zutil.o -o $@
 	strip $@
 
-png_main.o: png_main.cpp
-	$(CXX) $(CFLAGS) -c png_main.cpp
+main.o: main.cpp Makefile Group5.h
+	$(CXX) $(CFLAGS) -c main.cpp
 
 PNGdec.o: $(PNG_ROOT)/PNGdec.cpp $(PNG_ROOT)/png.inl $(PNG_ROOT)/PNGdec.h
 	$(CXX) $(CFLAGS) -c $(PNG_ROOT)/PNGdec.cpp
@@ -35,4 +35,4 @@ zutil.o: $(PNG_ROOT)/zutil.c
 	$(CC) $(CFLAGS) -c $(PNG_ROOT)/zutil.c
 
 clean:
-	rm -rf *.o pngconvert
+	rm -rf *.o imgcvt

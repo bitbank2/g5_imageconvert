@@ -8,8 +8,13 @@
 #include "Group5.h"
 #include "g5enc.inl"
 #include "g5dec.inl"
-#include <PNGdec.h>
+// two lines of RGBA pixels up to 2500 wide
+#define PNG_MAX_BUFFERED_PIXELS (2501 * 8)
+#include "PNGdec.h"
 
+const char *szPNGErrors[] = {"Success", "Invalid parameter", "Decode error", "Out of memory", "No buffer", "Unsupported feature", "Invalid file",  "Image too large", "Decoder quit early"};
+const char *szG5Errors[] = {"Success", "Invalid parameter", "Decode error", "Unsupported feature", "Encode complete", "Decode complete", "Not initialized", "Data overflow", "Max flips exceeded"}
+;
 PNG png; // static instance of class
 uint8_t u8Temp[1024];
 
@@ -260,7 +265,7 @@ void StartHexFile(FILE *f, int iLen, int w, int h, const char *fname, int iMode)
     }
     fprintf(f, "// compressed image data size = %d bytes\n//\n", iLen);
     strcpy(szTemp, fname);
-    i = strlen(szTemp);
+    i = (int)strlen(szTemp);
     if (szTemp[i-2] == '.') szTemp[i-2] = 0; // get the leaf name for the data
     fprintf(f, "const uint8_t %s[] = {\n", szTemp);
 } /* StartHexFile() */
@@ -354,7 +359,7 @@ unsigned char GetBWYRPixel(int r, int g, int b)
 //
 void ConvertBpp(uint8_t *pBMP, int iMode, int w, int h, int iBpp, uint8_t *palette)
 {
-    int gray, r, g, b, x, y, iDelta, iPitch, iDestPitch, iDestBpp;
+    int gray, r=0, g=0, b=0, x, y, iDelta, iPitch, iDestPitch, iDestBpp;
     uint8_t *s, *d, *pPal, u8, count;
 
     iDestBpp = (iMode == MODE_BW) ? 1 : 2;
@@ -439,7 +444,7 @@ void ConvertBpp(uint8_t *pBMP, int iMode, int w, int h, int iBpp, uint8_t *palet
 } /* ConvertBpp() */
 
 int main(int argc, const char * argv[]) {
-    int w, h, y, rc, bpp;
+    int w, h, y, rc, bpp = 0;
     uint8_t *s, *d, *pOut, *pData, *pImage;
     int iPitch, iPlaneSize, iOutSize, iDataSize, iMode;
     uint8_t *pPalette;
@@ -491,7 +496,7 @@ int main(int argc, const char * argv[]) {
         pOut = (uint8_t *)malloc(iPitch * (h+1)); // output BMP
         rc = g5_decode_init(&g5dec, w, h, (uint8_t *)&pBBBM[1], pBBBM->size);
         if (rc != G5_SUCCESS) {
-            printf("Error decoding Group5 image\n");
+            printf("Error decoding Group5 image: %s\n", szG5Errors[rc]);
             return -1;
         }
         for (y=0; y<h; y++) {
@@ -507,7 +512,7 @@ int main(int argc, const char * argv[]) {
         pOut = (uint8_t *)malloc(iPitch * (h*8+1)); // output BMP
         rc = g5_decode_init(&g5dec, w, h*2, (uint8_t *)&pBBBM[1], pBBBM->size);
         if (rc != G5_SUCCESS) {
-            printf("Error decoding Group5 image\n");
+            printf("Error decoding Group5 image: %s\n", szG5Errors[rc]);
             return -1;
         }
         for (y=0; y<h*2; y++) {
@@ -516,7 +521,7 @@ int main(int argc, const char * argv[]) {
         // Combine the two 1-bit planes into 4-bpp output for compatibility with Windows BMP files
         iPlaneSize = iPitch * h; // offset to second plane
         for (y=0; y<h; y++) {
-            uint8_t uc0, uc1;
+            uint8_t uc0=0, uc1=0;
             int x;
             s = &pOut[y * iPitch];
             d = &pOut[(iPitch * h * 2) + (y * ((w+1)>>1))]; // start after the bit planes
@@ -569,7 +574,10 @@ int main(int argc, const char * argv[]) {
                     bpp = 32;
                     break;
             } // switch
-        } // PNG vs BMP
+        } else { // error opening the PNG
+            printf("Error opening %s: \"%s\"\n", argv[1], szPNGErrors[rc]);
+            return -1;
+        }
         if (iMode != MODE_BW || (iMode == MODE_BW && bpp != 1)) { // need to convert it to 1 or 2-bpp
             printf("Converting pixels to %s\n", szModes[iMode]);
             ConvertBpp(pImage, iMode, w, h, bpp, pPalette);
@@ -640,7 +648,7 @@ int main(int argc, const char * argv[]) {
             fclose(f);
         }
     } else {
-        printf("Error encoding image: %d\n", rc);
+        printf("Error encoding image: %s\n", szG5Errors[rc]);
     }
     free(pImage);
     }
