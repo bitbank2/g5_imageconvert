@@ -21,9 +21,16 @@ challenging. If I were to use the Group4 algorithm to compress the font data, th
 modified image compression algorithm, I was able to fit my program code, font data and the decompressor in that tiny space.
 
 # Building the tool
-The G5 convert tool is written in C++ and uses POSIX functions for file I/O. This means that it should build without issue on Linux, MacOS and Windows.
+The G5 convert tool is written in C++ and uses POSIX functions for file I/O and memory allocation. This means that it should build without issue on Linux, MacOS and Windows.
 It uses my PNGdec library for decoding PNG images and includes this as a submodule. There are no external dependencies, so just run make and you're
-ready to use it.
+ready to use it. Start by cloning this repo recursively:<br>
+git clone --recursive https://github.com/bitbank2/g5_imageconvert<br>
+If you forgot to type the --recursive parameter, don't worry. After you clone it, do the following:<br>
+git clone https://github.com/bitbank2/g5_imageconvert<br>
+cd g5_imageconvert<br>
+git submodule init<br>
+git submodule update<br>
+Now you can simply type 'make' and you'll be ready to use it.<br>
 
 # How well does it compress images?
 FAX (Group4) compression was designed to compress black text on a white page. G5 is the same. It compresses images in two ways - one dimensionally
