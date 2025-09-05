@@ -32,3 +32,30 @@ on the line above. This works quite well for images with large areas of constant
 perform well on dithered patterns because it uses more bits to encode alternating colors that would be used by uncompressed data. For your average
 non-dithered 1-bit image, you'll usually get between 4 and 10 to 1 compression. The codec both compresses and decompresses images very quickly
 so the extra CPU cycles needed to decompress font images is insignificant compared to the overall font drawing.
+
+# Image Examples
+<b>1 Bit Example</b><br>
+<br>
+![Example PNG 1](/bear_193x80.png?raw=true "Example PNG 1")
+<br>
+This is a 193x80 1-bit per pixel image which compresses to a 1082 byte PNG
+file (uncompressed size is 2000 bytes, so PNG is not able to compress it
+very much. The following command line converts it into a G5 image, ready
+to include in your project:<br>
+./imgcvt bear_193x80.png bear_193x80.h BW<br>
+The result is a 534 byte G5 file. So in this case, G5 is a more effective
+image compression algorithm compared to PNG, yet it takes many fewer CPU
+cycles to decode the G5 image.<br>
+<br>
+<b>2 Bit Example</b><br>
+<br>
+![Example PNG 2](/smiley_hearts.png?raw=true "Example PNG 2")
+<br>
+This image is a 128x128 2-bit (4 color) PNG. The uncompressed size is 4096
+bytes and the PNG file compresses to 1472 bytes. The 2-plane G5 image is
+only 362 bytes. Again, G5 compresses this type of image much better than PNG.<br>
+When used within your project, you can easily draw it at any scale and
+any position with a single line of code:<br>
+![Use case](/g5_4clr.jpg?raw=true "Use case")
+<br>
+
