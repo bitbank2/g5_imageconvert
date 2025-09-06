@@ -1,3 +1,6 @@
 [submodule "PNGdec"]
 	path = PNGdec
 	url = https://github.com/bitbank2/PNGdec
+[submodule "PNGenc"]
+	path = PNGenc
+	url = https://github.com/bitbank2/PNGenc

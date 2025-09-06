@@ -8,14 +8,15 @@
 #include "Group5.h"
 #include "g5enc.inl"
 #include "g5dec.inl"
-// two lines of RGBA pixels up to 2500 wide
-#define PNG_MAX_BUFFERED_PIXELS (2501 * 8)
+#include "PNGenc.h"
 #include "PNGdec.h"
 
 const char *szPNGErrors[] = {"Success", "Invalid parameter", "Decode error", "Out of memory", "No buffer", "Unsupported feature", "Invalid file",  "Image too large", "Decoder quit early"};
 const char *szG5Errors[] = {"Success", "Invalid parameter", "Decode error", "Unsupported feature", "Encode complete", "Decode complete", "Not initialized", "Data overflow", "Max flips exceeded"}
 ;
 PNG png; // static instance of class
+PNGENC pngenc;
+
 uint8_t u8Temp[1024];
 
 /* Windows BMP header info (54 bytes) */
@@ -42,6 +43,52 @@ enum {
     MODE_4GRAY
 };
 //
+// Minimal code to save frames as PNG files
+//
+void SavePNG(const char *fname, uint8_t *pBitmap, uint8_t *pPalette, int w, int h, int bpp)
+{
+    FILE * oHandle;
+    int i, y, iPitch, iSize;
+    uint8_t *s, *pOut;
+    uint8_t ucTemp[12];
+    
+    if (bpp == 1) {
+        iPitch = (w+7)/8;
+    } else {
+        iPitch = (w+1)/2;
+        // fix the palette; red and blue are swapped
+        for (i=0; i<4; i++) {
+            ucTemp[(i*3)+0] = pPalette[(i*3)+2];
+            ucTemp[(i*3)+1] = pPalette[(i*3)+1];
+            ucTemp[(i*3)+2] = pPalette[(i*3)+0];
+        }
+    }
+    iSize = (w * h * bpp)/8 + 256;
+    pOut = (uint8_t *)malloc(iSize); // plenty of space
+    i = pngenc.open(pOut, iSize);
+    if (i == PNG_SUCCESS) {
+        i = pngenc.encodeBegin(w, h, (bpp == 1) ? PNG_PIXEL_GRAYSCALE : PNG_PIXEL_INDEXED, bpp, ucTemp, 9);
+        if (i == PNG_SUCCESS) {
+            s = pBitmap;
+            for (y=0; y<h && i == PNG_SUCCESS; y++) {
+                i = pngenc.addLine(s);
+                s += iPitch;
+            } // for y
+            iSize = pngenc.close();
+            oHandle = fopen(fname, "w+b");
+            if (!oHandle) {
+                printf("Error creating file %s\n", fname);
+                free(pOut);
+                return;
+            }
+            fwrite(pOut, 1, (size_t)iSize, oHandle);
+            fflush(oHandle);
+            fclose(oHandle);
+            free(pOut);
+        } // encodeBegin success
+    } // png.open success
+} /* SavePNG() */
+//
 // Minimal code to save frames as Windows BMP files
 //
 void SaveBMP(const char *fname, uint8_t *pBitmap, uint8_t *pPalette, int cx, int cy, int bpp)
@@ -53,6 +100,10 @@ uint8_t *s;
 uint8_t ucTemp[1024];
 
     oHandle = fopen(fname, "w+b");
+    if (!oHandle) {
+        printf("Error creating file %s\n", fname);
+        return;
+    }
     if (bpp == 1) {
         bsize = (cx + 7)>>3;
     } else if (bpp == 4) {
@@ -452,12 +503,13 @@ int main(int argc, const char * argv[]) {
     G5DECIMAGE g5dec;
     BB_BITMAP bbbm, *pBBBM;
     int bHFile; // flag indicating if the output will be a .H file of hex data
+    int bPNGFile; // flag indicating if the output file should be PNG
     const char *szModes[] = {"BW", "BWR", "BWYR", "4GRAY", NULL};
     
     printf("Group5 image conversion tool\n");
     if (argc != 4) {
         printf("Usage: ./pngconvert <PNG or BMP image> <g5 compressed image> <mode>\n");
-        printf("or ./pngconvert <G5 image> <BMP image> <mode>\n");
+        printf("or ./pngconvert <G5 image> <PNG or BMP image> <mode>\n");
         printf("valid modes: BW, BWR, BWYR, 4GRAY (case insensitive)\n");
         printf("G5 input and output can be binary or .H header files\n");
         return -1;
@@ -472,6 +524,8 @@ int main(int argc, const char * argv[]) {
     }
     pOut = (uint8_t *)argv[2] + strlen(argv[2]) - 1;
     bHFile = (pOut[0] == 'H' || pOut[0] == 'h'); // output an H file?
+    pOut = (uint8_t *)argv[2] + strlen(argv[2]) - 3;
+    bPNGFile = (pOut[0] == 'P' || pOut[0] == 'p');
     pData = ReadTheFile(argv[1], &iDataSize);
     if (pData == NULL)
     {
@@ -491,7 +545,7 @@ int main(int argc, const char * argv[]) {
         pBBBM = (BB_BITMAP *)pData;
         w = pBBBM->width;
         h = pBBBM->height;
-        printf("Converting 1-bit %dx%d G5 image to BMP\n", w, h);
+        printf("Converting 1-bit %dx%d G5 image to %s\n", w, h, (bPNGFile) ? "PNG" : "BMP");
         iPitch = (w + 7)/8;
         pOut = (uint8_t *)malloc(iPitch * (h+1)); // output BMP
         rc = g5_decode_init(&g5dec, w, h, (uint8_t *)&pBBBM[1], pBBBM->size);
@@ -502,12 +556,16 @@ int main(int argc, const char * argv[]) {
         for (y=0; y<h; y++) {
             g5_decode_line(&g5dec, &pOut[iPitch*y]);
         } // for y
-        SaveBMP(argv[2], pOut, NULL, w, h, 1);
+        if (bPNGFile) {
+            SavePNG(argv[2], pOut, NULL, w, h, 1);
+        } else { // assume it's a BMP file
+            SaveBMP(argv[2], pOut, NULL, w, h, 1);
+        }
     } else if (*(uint16_t *)pData == BB_BITMAP2_MARKER) { // 2-bit (separate planes
         pBBBM = (BB_BITMAP *)pData;
         w = pBBBM->width;
         h = pBBBM->height;
-        printf("Converting 2-bpp %dx%d G5 image to 4-bpp BMP\n", w, h);
+        printf("Converting 2-bpp %dx%d G5 image to 4-bpp %s\n", w, h, (bPNGFile) ? "PNG" : "BMP");
         iPitch = (w + 7)/8;
         pOut = (uint8_t *)malloc(iPitch * (h*8+1)); // output BMP
         rc = g5_decode_init(&g5dec, w, h*2, (uint8_t *)&pBBBM[1], pBBBM->size);
@@ -539,8 +597,13 @@ int main(int argc, const char * argv[]) {
                 uc0 <<= 1; uc1 <<= 1;
             } // for x
         } // for y
-        SaveBMP(argv[2], &pOut[(iPitch * h * 2)], (iMode == MODE_4GRAY) ? NULL : ucBWYRPalette, w, h, 4);
-    }    if (pData[0] == 'B' && pData[1] == 'M') { // input file is a BMP
+        if (bPNGFile) {
+            SavePNG(argv[2], &pOut[(iPitch * h * 2)], (iMode == MODE_4GRAY) ? NULL : ucBWYRPalette, w, h, 4);
+        } else { // assume it's a BMP file
+            SaveBMP(argv[2], &pOut[(iPitch * h * 2)], (iMode == MODE_4GRAY) ? NULL : ucBWYRPalette, w, h, 4);
+        }
+    }
+    if (pData[0] == 'B' && pData[1] == 'M') { // input file is a BMP
         pPalette = (uint8_t *)malloc(1024);
         pImage = ReadBMP(pData, iDataSize, &w, &h, &bpp, pPalette);
     } else if (pData[1] == 'P' && pData[2] == 'N') { // PNG file?
