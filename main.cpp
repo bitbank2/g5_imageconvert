@@ -8,8 +8,8 @@
 #include "Group5.h"
 #include "g5enc.inl"
 #include "g5dec.inl"
-#include "PNGenc.h"
 #include "PNGdec.h"
+#include "PNGenc.h"
 
 const char *szPNGErrors[] = {"Success", "Invalid parameter", "Decode error", "Out of memory", "No buffer", "Unsupported feature", "Invalid file",  "Image too large", "Decoder quit early"};
 const char *szG5Errors[] = {"Success", "Invalid parameter", "Decode error", "Unsupported feature", "Encode complete", "Decode complete", "Not initialized", "Data overflow", "Max flips exceeded"}
@@ -495,10 +495,10 @@ void ConvertBpp(uint8_t *pBMP, int iMode, int w, int h, int iBpp, uint8_t *palet
 } /* ConvertBpp() */
 
 int main(int argc, const char * argv[]) {
-    int w, h, y, rc, bpp = 0;
-    uint8_t *s, *d, *pOut, *pData, *pImage;
+    int w=0, h=0, y, rc, bpp = 0;
+    uint8_t *s, *d, *pOut, *pData, *pImage=NULL;
     int iPitch, iPlaneSize, iOutSize, iDataSize, iMode;
-    uint8_t *pPalette;
+    uint8_t *pPalette=NULL;
     G5ENCIMAGE g5enc;
     G5DECIMAGE g5dec;
     BB_BITMAP bbbm, *pBBBM;
@@ -561,6 +561,8 @@ int main(int argc, const char * argv[]) {
         } else { // assume it's a BMP file
             SaveBMP(argv[2], pOut, NULL, w, h, 1);
         }
+        printf("%s saved\n", argv[2]);
+        return 0;
     } else if (*(uint16_t *)pData == BB_BITMAP2_MARKER) { // 2-bit (separate planes
         pBBBM = (BB_BITMAP *)pData;
         w = pBBBM->width;
@@ -602,6 +604,8 @@ int main(int argc, const char * argv[]) {
         } else { // assume it's a BMP file
             SaveBMP(argv[2], &pOut[(iPitch * h * 2)], (iMode == MODE_4GRAY) ? NULL : ucBWYRPalette, w, h, 4);
         }
+        printf("%s saved\n", argv[2]);
+        return 0;
     }
     if (pData[0] == 'B' && pData[1] == 'M') { // input file is a BMP
         pPalette = (uint8_t *)malloc(1024);
@@ -641,6 +645,11 @@ int main(int argc, const char * argv[]) {
             printf("Error opening %s: \"%s\"\n", argv[1], szPNGErrors[rc]);
             return -1;
         }
+    }
+    if (iMode != MODE_BW && bpp == 1) {
+        printf("2-bit output requires input images with >= 2 bits per pixel\n");
+        return -1;
+    }
         if (iMode != MODE_BW || (iMode == MODE_BW && bpp != 1)) { // need to convert it to 1 or 2-bpp
             printf("Converting pixels to %s\n", szModes[iMode]);
             ConvertBpp(pImage, iMode, w, h, bpp, pPalette);
@@ -648,7 +657,7 @@ int main(int argc, const char * argv[]) {
         iPitch = (w+7) >> 3;
         pOut = (uint8_t *)malloc(iPitch * h * 2);
         if (iMode == MODE_BW) {
-            s = png.getBuffer();
+            s = pImage;
             rc = g5_encode_init(&g5enc, w, h, pOut, iPitch * h);
             for (y=0; y<h && rc == G5_SUCCESS; y++) {
                 rc = g5_encode_encodeLine(&g5enc, s);
@@ -714,6 +723,5 @@ int main(int argc, const char * argv[]) {
         printf("Error encoding image: %s\n", szG5Errors[rc]);
     }
     free(pImage);
-    }
     return 0;
 }
