@@ -27,6 +27,7 @@ ready to use it. Start by cloning this repo recursively:<br>
 
 ```shell
 git clone --recursive https://github.com/bitbank2/g5_imageconvert
+make
 ```
 
 If you forgot to type the --recursive parameter, don't worry. After you clone it, do the following:<br>
