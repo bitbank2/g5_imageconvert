@@ -508,8 +508,8 @@ int main(int argc, const char * argv[]) {
     
     printf("Group5 image conversion tool\n");
     if (argc != 4) {
-        printf("Usage: ./pngconvert <PNG or BMP image> <g5 compressed image> <mode>\n");
-        printf("or ./pngconvert <G5 image> <PNG or BMP image> <mode>\n");
+        printf("Usage: ./imgcvt <PNG or BMP image> <g5 compressed image> <mode>\n");
+        printf("or ./imgcvt <G5 image> <PNG or BMP image> <mode>\n");
         printf("valid modes: BW, BWR, BWYR, 4GRAY (case insensitive)\n");
         printf("G5 input and output can be binary or .H header files\n");
         return -1;

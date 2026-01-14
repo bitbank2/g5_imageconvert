@@ -40,8 +40,6 @@ git submodule update
 make
 ```
 
-Now you can simply type 'make' and you'll be ready to use it.<br>
-
 # How well does it compress images?
 FAX (Group4) compression was designed to compress black text on a white page. G5 is the same. It compresses images in two ways - one dimensionally
 with run length encoding (RLE) and two dimensionally by compressing the points that change color on the current line relative to similar points
@@ -51,25 +49,32 @@ non-dithered 1-bit image, you'll usually get between 4 and 10 to 1 compression. 
 so the extra CPU cycles needed to decompress font images is insignificant compared to the overall font drawing.
 
 # Image Examples
-<b>1 Bit Example</b><br>
-<br>
+### 1 Bit Example
+
 ![Example PNG 1](/bear_193x80.png?raw=true "Example PNG 1")
-<br>
+
 This is a 193x80 1-bit per pixel image which compresses to a 1082 byte PNG
 file (uncompressed size is 2000 bytes, so PNG is not able to compress it
 very much. The following command line converts it into a G5 image, ready
-to include in your project:<br>
+to include in your project.
 
+##### convert to `.h` file
 ```shell
 ./imgcvt bear_193x80.png bear_193x80.h BW
+```
+
+##### convert to binary file
+```shell
+./imgcvt bear_193x80.png bear_193x80.g BW
 ```
 
 The result is a 534 byte G5 file. So in this case, G5 is a more effective
 image compression algorithm compared to PNG, yet it takes many fewer CPU
 cycles to decode the G5 image.<br>
 <br>
-<b>2 Bit Example</b><br>
-<br>
+
+### 2 Bit Example
+
 ![Example PNG 2](/smiley_hearts.png?raw=true "Example PNG 2")
 <br>
 This image is a 128x128 2-bit (4 color) PNG. The uncompressed size is 4096
